@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Happy New Year My Star 🌟</title>
+    <style>
+        body { margin: 0; background-color: #000; overflow: hidden; font-family: Arial, sans-serif; touch-action: manipulation; }
+        canvas { display: block; }
+        #overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); display: flex; justify-content: center;
+            align-items: center; z-index: 1000; color: white;
+        }
+        #startBtn {
+            padding: 12px 30px; font-size: 0.9rem; background: transparent;
+            color: #fff; border: 1px solid #fff; border-radius: 2px;
+            cursor: pointer; letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="overlay">
+        <button id="startBtn">CHẠM ĐỂ BẮT ĐẦU ✨</button>
+    </div>
+
+    <audio id="bgMusic" loop playsinline>
+        <source src="HPNY.mp3" type="audio/mpeg">
+        <source src="hpny.mp3" type="audio/mpeg">
+    </audio>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const music = document.getElementById('bgMusic');
+        const startBtn = document.getElementById('startBtn');
+        const overlay = document.getElementById('overlay');
+
+        let particles = [];
+        let textParticles = [];
+        let fireworks = [];
+        let stars = [];
+        let buildings = [];
+        let animationStep = 0; 
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            initBuildings();
+        }
+        window.addEventListener('resize', resize);
+
+        class TextParticle {
+            constructor(x, y) {
+                this.destX = x; this.destY = y;
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 25;
+                this.vy = (Math.random() - 0.5) * 25;
+                this.acc = 0.05; // Giảm gia tốc để hạt bay chậm hơn
+                this.friction = 0.95; // Tăng ma sát để hạt trôi lãng mạn hơn
+                this.color = "rgba(255, 255, 255, " + (Math.random() * 0.5 + 0.5) + ")";
+            }
+            update() {
+                let dx = this.destX - this.x;
+                let dy = this.destY - this.y;
+                this.vx += dx * this.acc; this.vy += dy * this.acc;
+                this.vx *= this.friction; this.vy *= this.friction;
+                this.x += this.vx; this.y += this.vy;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, 1.5, 1.5);
+            }
+        }
+function createTextParticles(lines) {
+            const oldParticles = [...textParticles];
+            textParticles = [];
+            
+            const isMobile = window.innerWidth < 600;
+            const fontSize = isMobile ? window.innerWidth / 12 : 50;
+            
+            ctx.font = `bold ${fontSize}px Arial`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            lines.forEach((line, index) => {
+                const yOffset = (index - (lines.length - 1) / 2) * (fontSize * 1.5);
+                ctx.fillText(line, canvas.width / 2, canvas.height / 2 + yOffset);
+            });
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            for (let y = 0; y < canvas.height; y += 3) {
+                for (let x = 0; x < canvas.width; x += 3) {
+                    if (data[(y * canvas.width + x) * 4 + 3] > 128) {
+                        if (oldParticles.length > 0) {
+                            let p = oldParticles.pop();
+                            p.destX = x; p.destY = y;
+                            textParticles.push(p);
+                        } else {
+                            textParticles.push(new TextParticle(x, y));
+                        }
+                    }
+                }
+            }
+        }
+
+        function initBuildings() {
+            buildings = [];
+            const spacing = window.innerWidth < 600 ? 55 : 85;
+            for (let i = 0; i < window.innerWidth; i += spacing) {
+                let h = Math.random() * 80 + 60;
+                let b = { x: i, w: spacing - 10, h: h, windows: [] };
+                for (let wy = canvas.height - h + 15; wy < canvas.height - 10; wy += 18) {
+                    for (let wx = i + 10; wx < i + spacing - 15; wx += 12) {
+                        b.windows.push({x: wx, y: wy, on: Math.random() > 0.4});
+                    }
+                }
+                buildings.push(b);
+            }
+        }
+
+        class Firework {
+            constructor(x, isSpecial = false) {
+                this.x = x || Math.random() * canvas.width;
+                this.y = canvas.height;
+                this.targetY = Math.random() * (canvas.height * 0.45);
+                this.speed = 4.5;
+                this.color = isSpecial ? "#ffd700" : `hsl(${Math.random() * 360}, 100%, 75%)`;
+                this.isSpecial = isSpecial;
+                this.dead = false;
+            }
+            update() { this.y -= this.speed; if (this.y <= this.targetY) this.dead = true; }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath(); ctx.arc(this.x, this.y, 2, 0, Math.PI*2); ctx.fill();
+            }
+        }
+
+        function createStarExplosion(x, y) {
+            const points = 5;
+            for (let i = 0; i < 180; i++) { // Tăng số hạt nổ
+let angle = (i / 180) * Math.PI * 2;
+                let mod = (i / 180) * points;
+                let s = Math.abs(Math.sin(mod * Math.PI));
+                let speed = 2 + (1 - s) * 6; 
+                particles.push({ x: x, y: y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, alpha: 1, color: "#ffd700", gravity: 0.05 });
+            }
+        }
+
+        function loop() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            stars.forEach(s => {
+                ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.5 + 0.5})`;
+                ctx.fillRect(s.x, s.y, s.size, s.size);
+            });
+
+            if (animationStep >= 1) {
+                textParticles.forEach(p => { p.update(); p.draw(); });
+            } 
+            
+            if (animationStep === 2) {
+                buildings.forEach(b => {
+                    ctx.fillStyle = "#05050a"; ctx.fillRect(b.x, canvas.height - b.h, b.w, b.h);
+                    b.windows.forEach(w => {
+                        ctx.fillStyle = w.on ? "#ffd700" : "#101020";
+                        if (Math.random() > 0.998) w.on = !w.on;
+                        ctx.fillRect(w.x, w.y, 4, 7);
+                    });
+                });
+                fireworks.forEach((fw, i) => {
+                    fw.update(); fw.draw();
+                    if (fw.dead) {
+                        if (fw.isSpecial || Math.random() > 0.6) createStarExplosion(fw.x, fw.y);
+                        else {
+                            for(let j=0; j<70; j++) particles.push({
+                                x: fw.x, y: fw.y, vx: Math.random()*8-4, vy: Math.random()*8-4, 
+                                alpha: 1, color: fw.color, gravity: 0.1
+                            });
+                        }
+                        fireworks.splice(i, 1);
+                    }
+                });
+                particles.forEach((p, i) => {
+                    p.x += p.vx; p.y += p.vy + p.gravity; p.alpha -= 0.012;
+                    if (p.alpha <= 0) particles.splice(i, 1);
+                    ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color;
+                    ctx.fillRect(p.x, p.y, 1.2, 1.2);
+                });
+                ctx.globalAlpha = 1;
+            }
+            requestAnimationFrame(loop);
+        }
+
+        resize();
+        for(let i=0; i<150; i++) stars.push({x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight, size: Math.random()*1.5});
+
+        startBtn.onclick = () => {
+            overlay.style.display = 'none';
+            music.play().catch(() => {
+                document.addEventListener('touchstart', () => music.play(), {once: true});
+            });
+
+            animationStep = 1;
+            createTextParticles(["HAPPY NEW YEAR", "MY STAR"]);
+
+            setTimeout(() => {
+                animationStep = 2;
+                createTextParticles([
+"Ngôi sao ơi, một năm mới",
+                    "một hành trình mới,",
+                    "hãy toả sáng thật rực rỡ nhé."
+                ]);
+
+                // Tăng mật độ pháo hoa: 500ms bắn một quả thay vì 900ms
+                setInterval(() => { fireworks.push(new Firework()); }, 500); 
+            }, 6000); 
+
+            loop();
+        };
+    </script>
+</body>
+</html>
